@@ -7,8 +7,8 @@
 #include <WiFi.h>
 
 // Replace with your network credentials
-const char* ssid = "REPLACE_WITH_YOUR_SSID";
-const char* password = "REPLACE_WITH_YOUR_PASSWORD";
+const char* ssid = "TELUS3064";
+const char* password = "qy87j9jn5f";
 
 // Set web server port number to 80
 WiFiServer server(80);
@@ -19,6 +19,7 @@ String header;
 // Auxiliar variables to store the current output state
 String output26State = "off";
 String output27State = "off";
+String soilMoisture; 
 
 // Assign output variables to GPIO pins
 const int output26 = 26;
@@ -112,7 +113,7 @@ void loop(){
             client.println(".button2 {background-color: #555555;}</style></head>");
             
             // Web Page Heading
-            client.println("<body><h1>ESP32 Web Server</h1>");
+            client.println("<body><h1>Aloe Vera</h1>");
             
             // Display current state, and ON/OFF buttons for GPIO 26  
             client.println("<p>GPIO 26 - State " + output26State + "</p>");
@@ -153,3 +154,5 @@ void loop(){
     Serial.println("");
   }
 }
+
+
