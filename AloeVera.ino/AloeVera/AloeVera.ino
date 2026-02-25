@@ -17,13 +17,13 @@ WiFiServer server(80);
 String header;
 
 // Auxiliar variables to store the current output state
-String output26State = "off";
-String output27State = "off";
-String soilMoisture; 
+String pumpState = "off";
+int soilMoisture;
+int waterTime = 5000; 
 
 // Assign output variables to GPIO pins
-const int output26 = 26;
-const int output27 = 27;
+const int pumpPin = 26;
+const int soilPin = 27;
 
 // Current time
 unsigned long currentTime = millis();
@@ -35,11 +35,10 @@ const long timeoutTime = 2000;
 void setup() {
   Serial.begin(115200);
   // Initialize the output variables as outputs
-  pinMode(output26, OUTPUT);
-  pinMode(output27, OUTPUT);
+  pinMode(pumpPin, OUTPUT);
+  pinMode(soilPin, INPUT);
   // Set outputs to LOW
-  digitalWrite(output26, LOW);
-  digitalWrite(output27, LOW);
+  digitalWrite(pumpPin, LOW);
 
   // Connect to Wi-Fi network with SSID and password
   Serial.print("Connecting to ");
@@ -82,28 +81,21 @@ void loop(){
             client.println("Connection: close");
             client.println();
             
-            // turns the GPIOs on and off
-            if (header.indexOf("GET /26/on") >= 0) {
-              Serial.println("GPIO 26 on");
-              output26State = "on";
-              digitalWrite(output26, HIGH);
-            } else if (header.indexOf("GET /26/off") >= 0) {
-              Serial.println("GPIO 26 off");
-              output26State = "off";
-              digitalWrite(output26, LOW);
-            } else if (header.indexOf("GET /27/on") >= 0) {
-              Serial.println("GPIO 27 on");
-              output27State = "on";
-              digitalWrite(output27, HIGH);
-            } else if (header.indexOf("GET /27/off") >= 0) {
-              Serial.println("GPIO 27 off");
-              output27State = "off";
-              digitalWrite(output27, LOW);
-            }
-            
             // Display the HTML web page
             client.println("<!DOCTYPE html><html>");
-            client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+            // Header block
+            if (header.indexOf("GET /pump/start") >= 0) {
+              pumpState = "on";
+              // Only add the refresh when watering
+              client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+              client.println("<meta http-equiv=\"refresh\" content=\"" + String(1+waterTime/1000) + "; url=/\">");
+              client.println("</head>");
+            } else {
+              // Normal head without refresh
+              client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+              client.println("</head>");
+            }
+
             client.println("<link rel=\"icon\" href=\"data:,\">");
             // CSS to style the on/off buttons 
             // Feel free to change the background-color and font-size attributes to fit your preferences
@@ -116,27 +108,28 @@ void loop(){
             client.println("<body><h1>Aloe Vera</h1>");
             
             // Display current state, and ON/OFF buttons for GPIO 26  
-            client.println("<p>GPIO 26 - State " + output26State + "</p>");
-            // If the output26State is off, it displays the ON button       
-            if (output26State=="off") {
-              client.println("<p><a href=\"/26/on\"><button class=\"button\">ON</button></a></p>");
+            client.println("<p>Pump " + pumpState + "</p>");
+            // turns the GPIOs on and off
+            if (header.indexOf("GET /pump/start") >= 0) {
+              Serial.println("GPIO 26 on");
+              pumpState = "on";
+              client.println("<p><a href=\"/pump/start\"><button class=\"button button2\">Watering...</button></a></p>");
+              client.println("</body></html>");
+              client.println();
+              client.stop();
+
+              digitalWrite(pumpPin, HIGH);
+              delay(waterTime);
+              pumpState = "off";
+              digitalWrite(pumpPin, LOW);
+              header = "";
             } else {
-              client.println("<p><a href=\"/26/off\"><button class=\"button button2\">OFF</button></a></p>");
-            } 
-               
-            // Display current state, and ON/OFF buttons for GPIO 27  
-            client.println("<p>GPIO 27 - State " + output27State + "</p>");
-            // If the output27State is off, it displays the ON button       
-            if (output27State=="off") {
-              client.println("<p><a href=\"/27/on\"><button class=\"button\">ON</button></a></p>");
-            } else {
-              client.println("<p><a href=\"/27/off\"><button class=\"button button2\">OFF</button></a></p>");
-            }
+              client.println("<p><a href=\"/pump/start\"><button class=\"button\">WATER</button></a></p>");
+            }      
+
             client.println("</body></html>");
-            
-            // The HTTP response ends with another blank line
             client.println();
-            // Break out of the while loop
+            
             break;
           } else { // if you got a newline, then clear currentLine
             currentLine = "";
