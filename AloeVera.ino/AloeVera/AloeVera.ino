@@ -1,5 +1,5 @@
 /*********
-  WEB Server credit: Rui Santos
+  WEB Server template credit: Rui Santos
   Complete project details at https://randomnerdtutorials.com  
 *********/
 
@@ -23,7 +23,7 @@ int waterTime = 5000;
 
 // Assign output variables to GPIO pins
 const int pumpPin = 26;
-const int soilPin = 27;
+const int soilPin = 34;
 
 // Current time
 unsigned long currentTime = millis();
@@ -39,6 +39,7 @@ void setup() {
   pinMode(soilPin, INPUT);
   // Set outputs to LOW
   digitalWrite(pumpPin, LOW);
+  soilMoisture = analogRead(soilPin);
 
   // Connect to Wi-Fi network with SSID and password
   Serial.print("Connecting to ");
@@ -107,7 +108,21 @@ void loop(){
             // Web Page Heading
             client.println("<body><h1>Aloe Vera</h1>");
             
-            // Display current state, and ON/OFF buttons for GPIO 26  
+            // Display current state, and ON/OFF buttons for GPIO 26
+            soilMoisture = analogRead(soilPin);
+            client.println("<p>Soil Moisture Level = " + String(soilMoisture) + "</p>"); 
+            if (header.indexOf("GET /test/moisture") >= 0) {
+              client.println("<p><a href=\"/test/moisture\"><button class=\"button\">Test Soil</button></a></p>");
+              client.println("</body></html>");
+
+              client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+              client.println("<meta http-equiv=\"refresh\" content=\"" + String(0) + "; url=/\">");
+              client.println("</head>");
+            } else {
+              client.println("<p><a href=\"/test/moisture\"><button class=\"button\">Test Soil</button></a></p>");
+            }
+            
+
             client.println("<p>Pump " + pumpState + "</p>");
             // turns the GPIOs on and off
             if (header.indexOf("GET /pump/start") >= 0) {
