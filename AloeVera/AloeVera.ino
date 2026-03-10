@@ -19,11 +19,13 @@ String header;
 // Auxiliar variables to store the current output state
 String pumpState = "off";
 int soilMoisture;
-int waterTime = 5000; 
+int waterTime = 2000; 
 
 // Assign output variables to GPIO pins
 const int pumpPin = 26;
 const int soilPin = 34;
+const int grPin = 32;
+const int rPin = 33;
 
 // Current time
 unsigned long currentTime = millis();
@@ -40,6 +42,8 @@ void setup() {
   // Set outputs to LOW
   digitalWrite(pumpPin, LOW);
   soilMoisture = analogRead(soilPin);
+  digitalWrite(grPin, HIGH);
+  digitalWrite(rPin, HIGH);
 
   // Connect to Wi-Fi network with SSID and password
   Serial.print("Connecting to ");
