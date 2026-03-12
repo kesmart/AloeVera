@@ -19,7 +19,8 @@ String header;
 // Auxiliar variables to store the current output state
 String pumpState = "off";
 int soilMoisture;
-int waterTime = 2000;
+const int waterTime = 2000;
+const int drySoil = 3000;
 
 // Assign output variables to GPIO pins
 const int pumpPin = 26;
@@ -27,11 +28,12 @@ const int soilPin = 34;
 const int grPin = 32;
 const int rPin = 33;
 
-// Current time
+// For timer when the client is connected
+unsigned long grLedStartTime = 0;
+bool grLedActive = false;
+ 
 unsigned long currentTime = millis();
-// Previous time
 unsigned long previousTime = 0;
-// Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
 
 void setup() {
@@ -44,8 +46,8 @@ void setup() {
     // Set outputs to LOW
     digitalWrite(pumpPin, LOW);
     soilMoisture = analogRead(soilPin);
-    digitalWrite(grPin, HIGH);
-    digitalWrite(rPin, HIGH);
+    digitalWrite(grPin, LOW);
+    digitalWrite(rPin, LOW);
     Serial.println("lights on"); 
 
     // Connect to Wi-Fi network with SSID and password
@@ -65,12 +67,24 @@ void setup() {
 }
 
 void loop() {
+    if (grLedActive && (millis() - grLedStartTime >= 120000UL)) {
+      digitalWrite(grPin, LOW);
+      digitalWrite(rPin, LOW);
+      grLedActive = false;
+    }
+
     WiFiClient client = server.available();   // Listen for incoming clients
 
     if (client) {                             // If a new client connects,
         currentTime = millis();
         previousTime = currentTime;
         Serial.println("New Client.");          // print a message out in the serial port
+
+        // Client connected timer (2mins)
+        digitalWrite(grPin, HIGH);
+        grLedStartTime = millis();  // Start the 2-minute timer
+        grLedActive = true;         // Arm the auto-off
+
         String currentLine = "";                // make a String to hold incoming data from the client
         while (client.connected() && currentTime - previousTime <= timeoutTime) {  // loop while the client's connected
             currentTime = millis();
@@ -96,7 +110,7 @@ void loop() {
                             pumpState = "on";
                             // Only add the refresh when watering
                             client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-                            client.println("<meta http-equiv=\"refresh\" content=\"" + String(1 + waterTime / 1000) + "; url=/\">");
+                            client.println("<meta http-equiv=\"refresh\" content=\"" + String(waterTime / 1000) + "; url=/\">");
                             client.println("</head>");
                         }
                         else {
@@ -118,6 +132,12 @@ void loop() {
 
                         // Display current state, and ON/OFF buttons for GPIO 26
                         soilMoisture = analogRead(soilPin);
+                        if (soilMoisture > drySoil){
+                          digitalWrite(rPin, HIGH);
+                        }
+                        else {
+                          digitalWrite(rPin, LOW);
+                        }
                         client.println("<p>Soil Moisture Level = " + String(soilMoisture) + "</p>");
                         if (header.indexOf("GET /test/moisture") >= 0) {
                             client.println("<p><a href=\"/test/moisture\"><button class=\"button\">Test Soil</button></a></p>");
@@ -170,7 +190,6 @@ void loop() {
         header = "";
         // Close the connection
         client.stop();
-        Serial.println("Client disconnected.");
         Serial.println("");
     }
 }
